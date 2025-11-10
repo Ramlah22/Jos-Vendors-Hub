@@ -23,10 +23,10 @@ export default function LandingPage() {
         </p>
 
         <div className="flex flex-wrap justify-center gap-4">
-          <button className="flex items-center gap-2 bg-white text-[#016e52] px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition">
+          <Link to="/Product" className="flex items-center gap-2 bg-white text-[#016e52] px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition">
             <Sparkles size={18} />
             Start Shopping
-          </button>
+          </Link>
           <Link to="/sign-in" className="flex items-center gap-2 border border-gray-300 text-white px-6 py-3 rounded-lg font-medium hover:bg-white/10 transition">
             Sign In
           </Link>
@@ -98,9 +98,9 @@ export default function LandingPage() {
           <Link to="/create-account" className="bg-white text-[#016e52] px-6 py-3 rounded-lg font-medium hover:bg-gray-100 transition">
             Create Account
           </Link>
-          <button className="border border-gray-300 text-white px-6 py-3 rounded-lg font-medium hover:bg-white/10 transition">
+          <Link to="/vendor-profile" className="border border-gray-300 text-white px-6 py-3 rounded-lg font-medium hover:bg-white/10 transition">
             Browse Products
-          </button>
+          </Link>
         </div>
       </section>
     </div>
