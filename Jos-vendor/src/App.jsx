@@ -16,10 +16,10 @@ function App() {
         <Route path="/" element={<Homepage />} />
         <Route path="/sign-in" element={<SignInPage />} />
         <Route path="/create-account" element={<Login />} />
-  <Route path="/product" element={<Product />} />
-  <Route path="/product/:id" element={<ProductDetail />} />
-  <Route path="/checkout" element={<Checkout />} />
-  <Route path="/vendor-profile" element={<VendorProfilePage />} />
+        <Route path="/product" element={<Product />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/vendor-profile" element={<VendorProfilePage />} />
 
       </Routes>
     </Router>
