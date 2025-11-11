@@ -7,6 +7,9 @@ import Product from "./Pages/Product";
 import ProductDetail from "./Pages/ProductDetail";
 import Checkout from "./Pages/Checkout";
 import VendorProfilePage from "./Pages/Vendorpage";
+import Vendor1 from "./Vendors/Vendor1";
+import VendorDashboard from "./Dashboard/Vendordashboard"
+import Contact from "./Pages/Contact"
 
 
 function App() {
@@ -20,7 +23,9 @@ function App() {
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/vendor-profile" element={<VendorProfilePage />} />
-
+        <Route path="/Vendorpage1" element={<Vendor1 />} />
+         <Route path="/VendorDashboard"  element={<VendorDashboard/>} />  
+         <Route path="/contact" element={<Contact/>} />           
       </Routes>
     </Router>
   );

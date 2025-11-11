@@ -53,19 +53,20 @@ const VendorsPage = () => {
   return (
     <div className="min-h-screen bg-white w-full">
       {/* Navbar */}
-      <header className="w-full flex items-center justify-between pt-4 px-6 ">
+      <header className="w-full flex items-center justify-between pt-4 pl-2 ">
+        
         <img
           src={logo}
           alt="logo"
-          className="h-14 lg:ml-24 md:mr-2 w-14 rounded-lg  bg-gray-100"
+          className="h-14 lg:ml-24 md:mr-2 w-14  rounded-lg  bg-gray-100"
         />
 
         <div className="flex items-center gap-4">
-          <Link to="/product" className="border border-green-300 text-green-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-100 text-sm">
+          <Link to="/product" className="border border-green-300 ml-4 text-green-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-100 text-sm">
             My Orders
           </Link>
 
-          <button onClick={() => setSelectedCategory('Favorites')} className="border border-green-300 text-green-800 font-semibold px-4 py-2 rounded-lg flex gap-2 items-center hover:bg-gray-100 text-sm">
+          <button onClick={() => setSelectedCategory('Favorites')} className="border border-green-300 text-green-800 font-semibold px-4 py-2  rounded-lg flex gap-2 items-center hover:bg-gray-100 text-sm">
             <Heart size={16} /> Favorites ({favorites.length})
           </button>
 
@@ -229,7 +230,12 @@ const VendorsPage = () => {
                 </div>
                 <span className="bg-green-200 border border-green-300 rounded-lg text-xs px-3 py-1 mt-4 ml-6">{v.category}</span>
                 <div className="mt-4 pl-6 pr-6">
-                  <Link to="/Vendor1" className="block bg-[#017143] text-white rounded-lg py-2 text-sm text-center">View Vendor Page</Link>
+                  <Link 
+                    to={v.id === 1 ? "/Vendorpage1" : `/vendor/${v.id}`}
+                    className="block bg-[#017143] text-white rounded-lg py-2 text-sm text-center"
+                  >
+                    View Vendor Page
+                  </Link>
                 </div>
               </div>
             ) : (
@@ -245,7 +251,12 @@ const VendorsPage = () => {
                     <div className="flex flex-col items-end gap-2">
                       <button onClick={() => toggleFavorite(v.id)} className={`p-2 rounded ${isFavorite(v.id) ? 'bg-red-100 text-red-500' : 'bg-gray-100'}`}><Heart size={16} /></button>
                       <div className="text-emerald-700 font-bold">{v.sample.price}</div>
-                      <Link to={`/vendor/${v.id}`} className="bg-[#017143] text-white px-3 py-2 rounded text-sm text-center">View Vendor Page</Link>
+                      <Link 
+                        to={v.id === 1 ? "/Vendorpage1" : `/vendor/${v.id}`}
+                        className="bg-[#017143] text-white px-3 py-2 rounded text-sm text-center"
+                      >
+                        View Vendor Page
+                      </Link>
                     </div>
                   </div>
                 </div>

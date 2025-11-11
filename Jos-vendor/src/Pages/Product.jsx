@@ -1,10 +1,11 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/vendor.png";
-import { Filter, ShoppingCart } from "lucide-react";
+import { Filter, ShoppingCart, LogOut, User } from "lucide-react";
 import productsData from "../data/products";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "../context/CartContext";
+import { Link } from "react-router-dom";
 
 export default function Product() {
   const navigate = useNavigate();
@@ -12,6 +13,23 @@ export default function Product() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [showFilters, setShowFilters] = useState(false);
+  const [user, setUser] = useState(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  // Load user from localStorage on component mount
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    navigate('/sign-in');
+  };
 
   const categories = ["All", ...Array.from(new Set(productsData.map((p) => p.category)))];
 
@@ -26,17 +44,43 @@ export default function Product() {
       {/* Top Navigation */}
         <div className="space-y-3 mx-4 sm:mx-8 lg:mx-14 pt-4 pb-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-3">
+            <Link to="/vendor-profile" className="flex items-center gap-2 sm:gap-3">
               <div className="w-7 h-7 sm:w-8 sm:h-8 bg-emerald-600 rounded">
                 <img src={logo} alt="" className="w-[100%] h-[100%]" />
               </div>
               <span className="text-emerald-800 text-sm sm:text-base">JOS Vendor's Hub</span>
-            </div>
+            </Link>
             <div className="flex gap-3 items-center">
               <div className="px-3 py-2 bg-emerald-700 border border-green-200 text-white rounded-lg flex items-center gap-2 cursor-pointer" onClick={()=> navigate('/checkout')}>
                 <ShoppingCart size={16} />
                 <span>Cart ({items.length})</span>
               </div>
+              {user && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowProfileMenu(!showProfileMenu)}
+                    className="px-3 py-2 bg-emerald-700 border border-green-200 text-white rounded-lg flex items-center gap-2 hover:bg-emerald-800"
+                  >
+                    <User size={16} />
+                    <span className="hidden sm:inline text-sm">{user.fullName || user.name || 'Profile'}</span>
+                  </button>
+                  {showProfileMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-green-200 rounded-lg shadow-lg z-50">
+                      <div className="p-3 border-b border-gray-200">
+                        <p className="text-sm font-semibold text-gray-800">{user.fullName || user.name}</p>
+                        <p className="text-xs text-gray-600">{user.email}</p>
+                      </div>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 text-sm"
+                      >
+                        <LogOut size={16} />
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex gap-3 items-center">
