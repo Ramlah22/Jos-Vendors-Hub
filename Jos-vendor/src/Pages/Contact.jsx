@@ -1,20 +1,24 @@
 import React from "react";
 import { MapPin, Mail, Phone, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import Header from "../components/Header";
 
 export default function ContactPage() {
   const navigate = useNavigate();
 
   return (
     <>
+      {/* Header */}
+      <Header />
+
       {/* Back Button */}
       <div className="pt-6 pl-6">
         <button
-          onClick={() => navigate("/Homepage")}
+          onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-gray-700 cursor-pointer hover:text-emerald-700 transition font-medium"
         >
           <ArrowLeft size={20} />
-          Back to Home
+          Back
         </button>
       </div>
 

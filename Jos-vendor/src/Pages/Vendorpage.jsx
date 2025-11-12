@@ -1,11 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import logo from "../assets/vendor.png";
-import Vendor1 from "../assets/vendor1.jpeg";
-import Vendor2 from "../assets/vendor2.jpeg";
-import Vendor3 from "../assets/vendor3.jpeg";
-import Vendor4 from "../assets/vendor4.jpeg";
-import Vendor5 from "../assets/vendor5.jpeg";
-import Vendor6 from "../assets/vendor6.jpeg";  
 import { Link } from "react-router-dom"; 
 import {
   MapPin,
@@ -24,9 +18,19 @@ import {
   Book,
   Coffee,
   Gift,
+  Phone,
+  Mail,
+  Calendar,
+  Star,
+  User,
+  Building,
+  Loader
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useFavorites } from "../context/FavoritesContext";
+import Header from "../components/Header";
+import { db } from "../firebase";
+import { collection, query, onSnapshot } from "firebase/firestore";
 
 const VendorsPage = () => {
   const [viewMode, setViewMode] = useState('grid');
@@ -36,234 +40,543 @@ const VendorsPage = () => {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [badgeFilter, setBadgeFilter] = useState('All');
+  const [vendors, setVendors] = useState([]);
+  const [loading, setLoading] = useState(true);
   const { addToCart, items } = useCart();
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
 
-  const vendors = [
-    { id: 1, image: Vendor1, name: 'AfrikStyle Storefront', rating: 4.9, reviews: 214, location: 'Rukuba Road, Jos North', category: 'Fashion & Apparel', badge: 'Verified', description: 'Premium African fashion and accessories.', sample: { id: 'p-v1', name: 'Sample Ankara', price: '$29.99' } },
-    { id: 2, image: Vendor2, name: 'TechLink Africa', rating: 4.7, reviews: 162, location: 'Rayfield, Jos North', category: 'Electronics', badge: 'Top Seller', description: 'Latest gadgets and electronics.', sample: { id: 'p-v2', name: 'Sample Gadget', price: '$49.99' } },
-    { id: 3, image: Vendor3, name: 'InnovateCreate Hub', rating: 4.6, reviews: 102, location: 'Ahmadu Bello Way, Jos North', category: 'Home & Living', badge: 'New', description: 'Home improvements and decor.', sample: { id: 'p-v3', name: 'Sample Decor', price: '$19.99' } },
-    { id: 4, image: Vendor4, name: 'BeautyGlow Nigeria', rating: 4.8, reviews: 189, location: 'Bukuru, Jos South', category: 'Beauty & Care', badge: 'Featured', description: 'Beauty & cosmetics products.', sample: { id: 'p-v4', name: 'Sample Cream', price: '$14.99' } },
-    { id: 5, image: Vendor5, name: 'FoodieDelight Market', rating: 4.9, reviews: 235, location: 'Tudun Wada Road, Jos North', category: 'Food & Beverages', badge: 'Verified', description: 'Fresh groceries and packaged foods.', sample: { id: 'p-v5', name: 'Sample Meal', price: '$9.99' } },
-    { id: 6, image: Vendor6, name: 'ArtisanCraft Gallery', rating: 4.7, reviews: 156, location: 'Terminus, Jos North', category: 'Toys & Games', badge: 'Top Seller', description: 'Handmade arts and crafts.', sample: { id: 'p-v6', name: 'Sample Art', price: '$24.99' } },
-  ];
+  // Fetch vendors from Firestore
+  useEffect(() => {
+    const q = query(collection(db, "vendors"));
 
-  const categories = ['All','Electronics','Fashion & Apparel','Home & Living','Beauty & Care','Sports & Fitness','Books & Media','Food & Beverages','Toys & Games'];
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const vendorsList = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        vendorsList.push({ 
+          id: doc.id, 
+          ...data,
+          // Generate default rating and reviews if not available
+          rating: data.rating || (4.0 + Math.random() * 1.0).toFixed(1),
+          reviews: data.reviews || Math.floor(Math.random() * 200) + 50,
+          // Use businessCategory as category or generate one based on business type
+          category: data.businessCategory || data.category || 'General',
+          // Format business name
+          name: data.businessName || data.vendorName || 'Unknown Business',
+          // Use business description or create one
+          description: data.businessDescription || data.description || 'Quality products and services',
+          // Use business location
+          location: data.businessLocation || data.location || 'Jos, Nigeria',
+          // Generate badge based on created date or set default
+          badge: data.badge || (data.createdAt && data.createdAt.toDate && 
+                 (new Date() - data.createdAt.toDate()) < 30 * 24 * 60 * 60 * 1000 
+                 ? "New" : "Verified"),
+          // Use photoData as image
+          image: data.photoData || '/placeholder-vendor.jpg',
+          // Format join date
+          joinDate: data.createdAt ? data.createdAt.toDate().toLocaleDateString() : 'Recently Joined',
+          // Contact information
+          email: data.email || '',
+          phone: data.phone || '',
+          // Additional vendor details
+          uid: data.uid || doc.id
+        });
+      });
+      setVendors(vendorsList);
+      setLoading(false);
+      console.log("Fetched vendors:", vendorsList);
+    }, (error) => {
+      console.error("Error fetching vendors:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Get unique categories from vendors with some defaults
+  const vendorCategories = Array.from(new Set((vendors || []).map(v => v.category).filter(Boolean)));
+  const defaultCategories = ['General', 'Clothing', 'Electronics', 'Food & Beverages', 'Beauty & Health', 'Home Decor'];
+  const categories = ['All', 'Favorites', ...new Set([...vendorCategories, ...defaultCategories])];
 
   return (
     <div className="min-h-screen bg-white w-full">
-      {/* Navbar */}
-      <header className="w-full flex items-center justify-between pt-4 pl-2 ">
-        
-        <img
-          src={logo}
-          alt="logo"
-          className="h-14 lg:ml-24 md:mr-2 w-14  rounded-lg  bg-gray-100"
-        />
+      {/* Header */}
+      <Header />
 
-        <div className="flex items-center gap-4">
-          <Link to="/product" className="border border-green-300 ml-4 text-green-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-100 text-sm">
-            My Orders
-          </Link>
-
-          <button onClick={() => setSelectedCategory('Favorites')} className="border border-green-300 text-green-800 font-semibold px-4 py-2  rounded-lg flex gap-2 items-center hover:bg-gray-100 text-sm">
-            <Heart size={16} /> Favorites ({favorites.length})
-          </button>
-
-          <button onClick={() => window.location.href = '/checkout'} className="border bg-emerald-700 border-green-300 text-white font-semibold px-4 py-2 rounded-lg flex gap-2 items-center hover:bg-emerald-600 text-sm">
-            <ShoppingCart size={16} /> Cart ({items.length})
-          </button>
-        </div>
-      </header>
-
-      {/* Search bar */}
-    <div className="w-full flex mt-6 justify-center">
-  <div className="w-3/4 flex items-center bg-gray-100 border border-green-300 rounded-lg px-4 h-12">
-    <Search size={18} className="opacity-50" />
-    <input
-      type="text"
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      placeholder="Search by vendor name or location..."
-      className="w-full ml-2 outline-none bg-transparent"
-    />
-  </div>
-
-  <div className="ml-4 relative">
-    <button onClick={() => setShowFilterPanel((s) => !s)} className="flex items-center gap-2 px-4 h-12 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 border border-green-200 cursor-pointer">
-      <Filter size={18} /> Filters
-    </button>
-
-    {showFilterPanel && (
-      <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 shadow-lg rounded p-4 z-50">
-        <div className="mb-3">
-          <label className="block text-sm text-gray-600">Minimum rating</label>
-          <select value={minRating} onChange={(e) => setMinRating(Number(e.target.value))} className="w-full mt-1 p-2 border rounded">
-            <option value={0}>Any</option>
-            <option value={4}>4+</option>
-            <option value={4.5}>4.5+</option>
-            <option value={5}>5</option>
-          </select>
-        </div>
-
-        <div className="mb-3">
-          <label className="block text-sm text-gray-600">Badge</label>
-          <select value={badgeFilter} onChange={(e) => setBadgeFilter(e.target.value)} className="w-full mt-1 p-2 border rounded">
-            <option value="All">All</option>
-            <option value="Verified">Verified</option>
-            <option value="Top Seller">Top Seller</option>
-            <option value="Featured">Featured</option>
-            <option value="New">New</option>
-          </select>
-        </div>
-
-        <div className="flex justify-between gap-2">
-          <button onClick={() => { setMinRating(0); setBadgeFilter('All'); setShowFilterPanel(false); }} className="px-3 py-2 text-sm border rounded">Clear</button>
-          <button onClick={() => setShowFilterPanel(false)} className="px-3 py-2 text-sm bg-emerald-700 text-white rounded">Apply</button>
-        </div>
-      </div>
-    )}
-  </div>
-</div>
-
-
-      {/* Green Header */}
-      <div className="w-full bg-[#017143] text-white py-10 px-6 mt-6">
-        <h1 className="text-3xl font-bold">Browse Vendors & Products</h1>
-        <p className="opacity-90 mt-1 text-lg">
-          Discover amazing vendors across different categories. Save your
-          favorites for quick access.
-        </p>
-
-        {/* View toggle */}
-        <div className="flex justify-end gap-3 mt-4 mr-10">
-          <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg shadow-sm ${viewMode==='grid' ? 'bg-emerald-900 text-white' : 'bg-gray-100 text-[#017143] '}`}>
-            <Grid size={18} />
-          </button>
-          <button onClick={() => setViewMode('rows')} className={`p-2 rounded-lg shadow-sm ${viewMode==='rows' ? 'bg-emerald-900 text-white' : 'bg-gray-100 text-[#017143]'}`}>
-            <Rows size={18} />
-          </button>
+                 {/* Hero Banner */}
+      <div className="bg-emerald-700 py-12 text-white text-center">
+        <div className="max-w-4xl mx-auto px-6">
+          <h1 className="text-4xl font-bold mb-4">Discover Amazing Vendors</h1>
+          <p className="text-xl opacity-90">
+            Connect with verified vendors across different categories and find exactly what you need
+          </p>
+          {searchTerm && (
+            <p className="mt-4 text-lg">
+              Showing results for <span className="font-semibold">"{searchTerm}"</span>
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 px-6 mt-8">
-        <button onClick={() => { setSelectedCategory('All'); setViewMode('grid'); setShowCategories(false); window.scrollTo({top: 200, behavior: 'smooth'}); }} className={`px-4 py-2 border border-green-300 rounded-full text-sm ${selectedCategory==='All' ? 'bg-[#017143] text-white' : ''}`}>
-          Browse Vendors
-        </button>
-        <button onClick={() => { setShowCategories(true); setSelectedCategory('All'); window.scrollTo({top: 400, behavior: 'smooth'}); }} className="px-4 py-2 border border-green-300 text-sm rounded-full">
-          Shop by Category
-        </button>
-        <button onClick={() => setSelectedCategory('Favorites')} className="px-4 py-2 text-sm border border-green-300 rounded-full flex items-center gap-2">
-          My Favorites ({favorites.length})
+      {/* Additional Vendor Page Actions */}
+      <div className="w-full flex items-center justify-end pt-4 pr-6 gap-4">
+        <Link to="/product" className="border border-green-300 text-green-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-100 text-sm">
+          My Orders
+        </Link>
+
+        <button onClick={() => setSelectedCategory('Favorites')} className="border border-green-300 text-green-800 font-semibold px-4 py-2 rounded-lg flex gap-2 items-center hover:bg-gray-100 text-sm">
+          <Heart size={16} /> Favorites ({favorites.length})
         </button>
       </div>
 
-      {/* Vendors Grid / Rows - show categories only when requested */}
-      {showCategories ? (
-        <div className="max-w-7xl mx-auto px-12 mt-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
-            {[
-              { key: 'Electronics', icon: Smartphone },
-              { key: 'Fashion & Apparel', icon: ShoppingBag },
-              { key: 'Home & Living', icon: Home },
-              { key: 'Beauty & Care', icon: Droplet },
-              { key: 'Sports & Fitness', icon: Activity },
-              { key: 'Books & Media', icon: Book },
-              { key: 'Food & Beverages', icon: Coffee },
-              { key: 'Toys & Games', icon: Gift },
-            ].map((c) => {
-              const Icon = c.icon;
-              return (
-                <button key={c.key} onClick={() => { setSelectedCategory(c.key); setShowCategories(false); window.scrollTo({top: 600, behavior: 'smooth'}); }} className="flex flex-col items-center gap-2 p-4 bg-white rounded shadow text-center cursor-pointer hover:scale-105 transition">
-                  <div className="bg-emerald-100 p-3 rounded-full text-emerald-700"><Icon size={20} /></div>
-                  <div className="text-sm">{c.key}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="max-w-7xl mx-auto px-12 py-10">
-
-        <div className={`${viewMode==='grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10' : 'flex flex-col divide-y'} `}>
-          {vendors
-            .filter(
-              (v) =>
-                // category / favorites filtering
-                (selectedCategory === 'All' ||
-                  (selectedCategory === 'Favorites' ? favorites.includes(v.id) : v.category === selectedCategory))
-            )
-            .filter((v) => {
-              // search by name or location
-              if (!searchTerm) return true;
-              const q = searchTerm.toLowerCase();
-              return (
-                v.name.toLowerCase().includes(q) || v.location.toLowerCase().includes(q)
-              );
-            })
-            .filter((v) => {
-              // min rating filter
-              if (!minRating) return true;
-              return v.rating >= minRating;
-            })
-            .filter((v) => {
-              // badge filter
-              if (!badgeFilter || badgeFilter === 'All') return true;
-              return v.badge === badgeFilter;
-            })
-            .map((v) => (
-            viewMode==='grid' ? (
-              <div key={v.id} className=" bg-white rounded-lg shadow border border-green-200 hover:shadow-xl hover:border-green-300 p-3">
-                <div className="relative">
-                  <img src={v.image} alt={v.name} className="rounded-lg w-full h-96 object-cover" />
-                  <span className="absolute top-3 left-3 bg-[#017143] text-white text-xs px-2 py-1 rounded-md flex items-center gap-1"><BadgeCheck size={14} /> {v.badge}</span>
-                  <button onClick={() => toggleFavorite(v.id)} className="absolute top-3 right-3">
-                    <Heart size={18} className={`${isFavorite(v.id) ? 'text-red-500 fill-current' : ''}`} />
-                  </button>
+      {/* Search and Filter Section */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          {/* Search Bar */}
+          <div className="mb-6">
+            <div className="max-w-2xl mx-auto">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search size={20} className="text-gray-400" />
                 </div>
-                <p className="text-base sm:text-lg text-emerald-800 font-medium pb-2 pl-6 mt-10">{v.name}</p>
-                <p className="text-gray-700 lg:text-base pl-6"><span className="text-yellow-500">★</span> {v.rating} ({v.reviews})</p>
-                <div className="flex gap-2 mt-1 items-center">
-                  <span className="pl-6 pb-2 text-base px-3 py-1 flex items-center gap-1"><MapPin size={14} className="text-emerald-700" />{v.location}</span>
-                </div>
-                <span className="bg-green-200 border border-green-300 rounded-lg text-xs px-3 py-1 mt-4 ml-6">{v.category}</span>
-                <div className="mt-4 pl-6 pr-6">
-                  <Link 
-                    to={v.id === 1 ? "/Vendorpage1" : `/vendor/${v.id}`}
-                    className="block bg-[#017143] text-white rounded-lg py-2 text-sm text-center"
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search vendors by name, location, or business type..."
+                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   >
-                    View Vendor Page
-                  </Link>
+                    <span className="text-gray-400 hover:text-gray-600 text-lg">×</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Filters and Controls */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowFilterPanel(!showFilterPanel)}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
+              >
+                <Filter size={16} />
+                <span className="text-sm">Filters</span>
+              </button>
+              
+              <button
+                onClick={() => setShowCategories(!showCategories)}
+                className="flex items-center gap-2 px-4 py-2 border border-emerald-600 text-emerald-600 rounded-lg hover:bg-emerald-50 transition"
+              >
+                <Grid size={16} />
+                <span className="text-sm">Categories</span>
+              </button>
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600 mr-2">View:</span>
+              <button 
+                onClick={() => setViewMode('grid')} 
+                className={`p-2 rounded-lg transition ${viewMode === 'grid' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                <Grid size={16} />
+              </button>
+              <button 
+                onClick={() => setViewMode('rows')} 
+                className={`p-2 rounded-lg transition ${viewMode === 'rows' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                <Rows size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Filter Panel */}
+          {showFilterPanel && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2">Minimum Rating</label>
+                  <select 
+                    value={minRating} 
+                    onChange={(e) => setMinRating(Number(e.target.value))} 
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    <option value={0}>Any Rating</option>
+                    <option value={4}>4+ Stars</option>
+                    <option value={4.5}>4.5+ Stars</option>
+                    <option value={5}>5 Stars</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2">Badge</label>
+                  <select 
+                    value={badgeFilter} 
+                    onChange={(e) => setBadgeFilter(e.target.value)} 
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    <option value="All">All Badges</option>
+                    <option value="Verified">Verified</option>
+                    <option value="Top Seller">Top Seller</option>
+                    <option value="Featured">Featured</option>
+                    <option value="New">New</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2">Category</label>
+                  <select 
+                    value={selectedCategory} 
+                    onChange={(e) => setSelectedCategory(e.target.value)} 
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-            ) : (
-              <div key={v.id} className="flex gap-6 py-6 items-center">
-                <img src={v.image} alt={v.name} className="w-40 h-40 object-cover rounded-lg" />
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold">{v.name}</h3>
-                      <p className="text-sm text-gray-600">{v.location} • <span className="text-yellow-500">★</span> {v.rating} ({v.reviews})</p>
-                      <p className="mt-2 text-sm text-gray-700">{v.description}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <button onClick={() => toggleFavorite(v.id)} className={`p-2 rounded ${isFavorite(v.id) ? 'bg-red-100 text-red-500' : 'bg-gray-100'}`}><Heart size={16} /></button>
-                      <div className="text-emerald-700 font-bold">{v.sample.price}</div>
-                      <Link 
-                        to={v.id === 1 ? "/Vendorpage1" : `/vendor/${v.id}`}
-                        className="bg-[#017143] text-white px-3 py-2 rounded text-sm text-center"
-                      >
-                        View Vendor Page
-                      </Link>
-                    </div>
-                  </div>
-                </div>
+
+              <div className="flex justify-end gap-2 mt-4">
+                <button 
+                  onClick={() => { 
+                    setMinRating(0); 
+                    setBadgeFilter('All'); 
+                    setSelectedCategory('All');
+                    setSearchTerm('');
+                  }} 
+                  className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Clear All
+                </button>
+                <button 
+                  onClick={() => setShowFilterPanel(false)} 
+                  className="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition"
+                >
+                  Apply Filters
+                </button>
               </div>
-            )
-          ))}
+            </div>
+          )}
+
+          {/* Categories */}
+          {showCategories && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {[
+                  { key: 'All', icon: Grid },
+                  { key: 'Clothing', icon: ShoppingBag },
+                  { key: 'Electronics', icon: Smartphone },
+                  { key: 'Home Decor', icon: Home },
+                  { key: 'Beauty & Health', icon: Droplet },
+                  { key: 'Sports & Fitness', icon: Activity },
+                  { key: 'Books & Media', icon: Book },
+                  { key: 'Food & Beverages', icon: Coffee },
+                  { key: 'Toys & Games', icon: Gift },
+                ].map((c) => {
+                  const Icon = c.icon;
+                  const count = c.key === 'All' ? (vendors || []).length : (vendors || []).filter(v => v.category === c.key).length;
+                  return (
+                    <button 
+                      key={c.key} 
+                      onClick={() => { 
+                        setSelectedCategory(c.key);
+                        setShowCategories(false);
+                      }} 
+                      className={`flex flex-col items-center gap-2 p-3 rounded-lg text-center transition ${
+                        selectedCategory === c.key 
+                          ? 'bg-emerald-600 text-white' 
+                          : 'bg-white border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
+                      }`}
+                    >
+                      <Icon size={20} />
+                      <div className="text-xs font-medium">{c.key}</div>
+                      {count > 0 && <div className="text-xs opacity-75">({count})</div>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
+      </div>
+     
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-10">
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="text-center">
+              <Loader className="animate-spin h-12 w-12 text-emerald-600 mx-auto mb-4" />
+              <p className="text-gray-600 text-lg">Loading vendors...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Results Info */}
+            <div className="mb-8">
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+                {selectedCategory === 'All' ? 'All Vendors' : `${selectedCategory} Vendors`}
+              </h2>
+              <p className="text-gray-600">
+                {(vendors || []).filter(vendor => {
+                  const matchesSearch = !searchTerm || 
+                    vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    vendor.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    vendor.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    vendor.category?.toLowerCase().includes(searchTerm.toLowerCase());
+                  
+                  const matchesCategory = selectedCategory === 'All' || vendor.category === selectedCategory;
+                  const matchesRating = !minRating || vendor.rating >= minRating;
+                  const matchesBadge = badgeFilter === 'All' || vendor.badge === badgeFilter;
+                  const matchesFavorites = selectedCategory !== 'Favorites' || isFavorite(vendor.id);
+                  
+                  return matchesSearch && matchesCategory && matchesRating && matchesBadge && matchesFavorites;
+                }).length} vendors found
+              </p>
+            </div>
+
+            {/* Vendors Grid/List */}
+            <div className={`${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8' : 'space-y-6'}`}>
+              {(vendors || [])
+                .filter(vendor => {
+                  const matchesSearch = !searchTerm || 
+                    vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    vendor.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    vendor.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    vendor.category?.toLowerCase().includes(searchTerm.toLowerCase());
+                  
+                  const matchesCategory = selectedCategory === 'All' || vendor.category === selectedCategory;
+                  const matchesRating = !minRating || vendor.rating >= minRating;
+                  const matchesBadge = badgeFilter === 'All' || vendor.badge === badgeFilter;
+                  const matchesFavorites = selectedCategory !== 'Favorites' || isFavorite(vendor.id);
+                  
+                  return matchesSearch && matchesCategory && matchesRating && matchesBadge && matchesFavorites;
+                })
+                .map((vendor) => (
+                  viewMode === 'grid' ? (
+                    <div key={vendor.id} className="bg-white rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden">
+                      {/* Vendor Image */}
+                      <div className="relative h-48">
+                        <img 
+                          src={vendor.image} 
+                          alt={vendor.name} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = '/placeholder-vendor.jpg';
+                          }}
+                        />
+                        <div className="absolute top-3 left-3">
+                          <span className="bg-emerald-600 text-white text-xs px-3 py-1 rounded-full flex items-center gap-1">
+                            <BadgeCheck size={12} />
+                            {vendor.badge}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => toggleFavorite(vendor.id)} 
+                          className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition"
+                        >
+                          <Heart 
+                            size={16} 
+                            className={`${isFavorite(vendor.id) ? 'text-red-500 fill-current' : 'text-gray-400'}`} 
+                          />
+                        </button>
+                      </div>
+
+                      {/* Vendor Info */}
+                      <div className="p-6">
+                        <div className="mb-4">
+                          <h3 className="text-xl font-semibold text-gray-900 mb-2">{vendor.name}</h3>
+                          <span className="inline-block bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full">
+                            {vendor.category}
+                          </span>
+                        </div>
+
+                        {/* Rating */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="flex items-center">
+                            <Star size={14} className="text-yellow-400 fill-current" />
+                            <span className="ml-1 text-sm font-medium text-gray-700">{vendor.rating}</span>
+                          </div>
+                          <span className="text-gray-400">•</span>
+                          <span className="text-sm text-gray-500">{vendor.reviews} reviews</span>
+                        </div>
+
+                        {/* Location */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <MapPin size={14} className="text-gray-400" />
+                          <span className="text-sm text-gray-600">{vendor.location}</span>
+                        </div>
+
+                        {/* Contact Info */}
+                        <div className="space-y-2 mb-4">
+                          {vendor.email && (
+                            <div className="flex items-center gap-2">
+                              <Mail size={14} className="text-gray-400" />
+                              <span className="text-sm text-gray-600">{vendor.email}</span>
+                            </div>
+                          )}
+                          {vendor.phone && (
+                            <div className="flex items-center gap-2">
+                              <Phone size={14} className="text-gray-400" />
+                              <span className="text-sm text-gray-600">{vendor.phone}</span>
+                            </div>
+                          )}
+                          {vendor.joinDate && (
+                            <div className="flex items-center gap-2">
+                              <Calendar size={14} className="text-gray-400" />
+                              <span className="text-sm text-gray-600">Joined {vendor.joinDate}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Description */}
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                          {vendor.description}
+                        </p>
+
+                        {/* Action Button */}
+                        <Link
+                          to={`/vendor/${vendor.id}`}
+                          className="block w-full bg-emerald-600 text-white text-center py-2 px-4 rounded-lg hover:bg-emerald-700 transition font-medium"
+                        >
+                          Visit Store
+                        </Link>
+                      </div>
+                    </div>
+                  ) : (
+                    // List View
+                    <div key={vendor.id} className="bg-white rounded-lg shadow border border-gray-200 hover:shadow-md transition-all duration-300">
+                      <div className="p-6">
+                        <div className="flex gap-6">
+                          {/* Vendor Image */}
+                          <div className="relative">
+                            <img 
+                              src={vendor.image} 
+                              alt={vendor.name} 
+                              className="w-24 h-24 object-cover rounded-lg"
+                              onError={(e) => {
+                                e.target.src = '/placeholder-vendor.jpg';
+                              }}
+                            />
+                            <span className="absolute -top-2 -right-2 bg-emerald-600 text-white text-xs px-2 py-1 rounded-full">
+                              {vendor.badge}
+                            </span>
+                          </div>
+
+                          {/* Vendor Details */}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h3 className="text-xl font-semibold text-gray-900 mb-2">{vendor.name}</h3>
+                                <div className="flex items-center gap-4 mb-2">
+                                  <span className="inline-block bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full">
+                                    {vendor.category}
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <Star size={14} className="text-yellow-400 fill-current" />
+                                    <span className="text-sm font-medium text-gray-700">{vendor.rating}</span>
+                                    <span className="text-sm text-gray-500">({vendor.reviews})</span>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-2 mb-2">
+                                  <MapPin size={14} className="text-gray-400" />
+                                  <span className="text-sm text-gray-600">{vendor.location}</span>
+                                </div>
+
+                                <p className="text-gray-600 text-sm mb-3 line-clamp-2 max-w-md">
+                                  {vendor.description}
+                                </p>
+
+                                <div className="flex items-center gap-4 text-sm">
+                                  {vendor.email && (
+                                    <div className="flex items-center gap-1">
+                                      <Mail size={12} className="text-gray-400" />
+                                      <span className="text-gray-600">{vendor.email}</span>
+                                    </div>
+                                  )}
+                                  {vendor.phone && (
+                                    <div className="flex items-center gap-1">
+                                      <Phone size={12} className="text-gray-400" />
+                                      <span className="text-gray-600">{vendor.phone}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex flex-col items-end gap-3">
+                                <button 
+                                  onClick={() => toggleFavorite(vendor.id)} 
+                                  className={`p-2 rounded-full transition ${
+                                    isFavorite(vendor.id) ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                  }`}
+                                >
+                                  <Heart size={16} className={isFavorite(vendor.id) ? 'fill-current' : ''} />
+                                </button>
+
+                                <Link
+                                  to={`/vendor/${vendor.id}`}
+                                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition text-sm font-medium"
+                                >
+                                  Visit Store
+                                </Link>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                ))}
+            </div>
+
+            {/* Empty State */}
+            {(vendors || []).filter(vendor => {
+              const matchesSearch = !searchTerm || 
+                vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                vendor.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                vendor.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                vendor.category?.toLowerCase().includes(searchTerm.toLowerCase());
+              
+              const matchesCategory = selectedCategory === 'All' || vendor.category === selectedCategory;
+              const matchesRating = !minRating || vendor.rating >= minRating;
+              const matchesBadge = badgeFilter === 'All' || vendor.badge === badgeFilter;
+              const matchesFavorites = selectedCategory !== 'Favorites' || isFavorite(vendor.id);
+              
+              return matchesSearch && matchesCategory && matchesRating && matchesBadge && matchesFavorites;
+            }).length === 0 && (
+              <div className="text-center py-16">
+                <User size={48} className="mx-auto text-gray-400 mb-4" />
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No vendors found</h3>
+                <p className="text-gray-500 mb-4">
+                  {searchTerm 
+                    ? `No vendors match your search for "${searchTerm}"`
+                    : `No vendors available in ${selectedCategory === 'Favorites' ? 'your favorites' : selectedCategory}`
+                  }
+                </p>
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedCategory("All");
+                    setMinRating(0);
+                    setBadgeFilter("All");
+                  }}
+                  className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

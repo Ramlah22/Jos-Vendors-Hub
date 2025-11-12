@@ -1,13 +1,19 @@
 import { Mail, Lock, Loader, User, Store } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { auth, db } from "../firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { getDoc, doc } from "firebase/firestore";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import PricingModal from './PricingModal';
 
 
 const SignInPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [selectedRole, setSelectedRole] = useState("customer");
+  const [showPricingModal, setShowPricingModal] = useState(false);
   const [loginForm, setLoginForm] = useState({
     email: "",
     password: ""
@@ -16,59 +22,114 @@ const SignInPage = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setLoginForm(prev => ({ ...prev, [name]: value }));
-    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
     console.log('Submitting login', loginForm, 'as', selectedRole);
     setLoading(true);
     try {
-      const res = await fetch("https://vending-n63r.onrender.com/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: loginForm.email,
-          password: loginForm.password,
-          role: selectedRole
-        })
-      });
+      // Sign in with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        loginForm.email,
+        loginForm.password
+      );
 
-      console.log(res);
+      const user = userCredential.user;
+      console.log('Firebase user logged in:', user.uid);
 
-      const data = await res.json();
-      console.log('login response', res.status, data);
-      if (!res.ok) {
-        setError(data.message || (data.errors && data.errors[0] && data.errors[0].msg) || 'Login failed');
+      // Get user data from Firestore based on selected role
+      const collectionName = selectedRole === 'vendor' ? 'vendors' : 'customers';
+      const userDoc = await getDoc(doc(db, collectionName, user.uid));
+
+      if (!userDoc.exists()) {
+        toast.error(`No ${selectedRole} account found with this email. Please check your role or sign up.`);
         setLoading(false);
         return;
       }
 
-      // Save token and user to localStorage
-      if (data.token) localStorage.setItem('token', data.token);
-      if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+      const userData = userDoc.data();
+      console.log('User data from Firestore:', userData);
 
-      // Role-based redirect - check selected role or returned role
-      const userRole = data.user?.role || selectedRole;
-      if (userRole === 'vendor') {
-        console.log('Redirecting to vendor dashboard');
-        navigate('/VendorDashboard');
+      // Verify the role matches
+      if (userData.role !== selectedRole) {
+        toast.error(`This account is registered as a ${userData.role}, not a ${selectedRole}. Please select the correct role.`);
+        setLoading(false);
+        return;
+      }
+
+      // Save user info to localStorage
+      localStorage.setItem('user', JSON.stringify({
+        uid: user.uid,
+        email: user.email,
+        ...userData
+      }));
+
+      toast.success(`Welcome back, ${userData.vendorName || userData.fullName}!`);
+
+      // Role-based redirect with pricing modal for vendors
+      if (selectedRole === 'vendor') {
+        setTimeout(() => {
+          setLoading(false);
+          setShowPricingModal(true);
+        }, 1500);
       } else {
-        console.log('Redirecting to product page');
-        navigate('/product');
+        setTimeout(() => {
+          console.log('Redirecting to product page');
+          navigate('/product');
+        }, 1500);
       }
     } catch (err) {
       console.error('login error', err);
-      setError(err.message || 'An error occurred');
+      if (err.code === 'auth/user-not-found') {
+        toast.error("No account found with this email. Please sign up first.");
+      } else if (err.code === 'auth/wrong-password') {
+        toast.error("Incorrect password. Please try again.");
+      } else if (err.code === 'auth/invalid-email') {
+        toast.error("Invalid email address.");
+      } else if (err.code === 'auth/user-disabled') {
+        toast.error("This account has been disabled.");
+      } else if (err.code === 'auth/invalid-credential') {
+        toast.error("Invalid email or password. Please try again.");
+      } else {
+        toast.error(err.message || 'An error occurred during login');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const handlePlanSelection = (planId) => {
+    console.log('Selected plan:', planId);
+    // Here you can store the selected plan or make API calls
+    // For now, we'll just navigate to dashboard
+    toast.success(`${planId === 'pro' ? 'Pro Plan' : 'Pro Plus Plan'} selected! Starting your free trial.`);
+    setTimeout(() => {
+      navigate('/vendor/overview');
+    }, 1500);
+  };
+
+  const handleSkipPricing = () => {
+    setShowPricingModal(false);
+    navigate('/vendor/overview');
+  };
+
   return (
     <div className="min-h-screen bg-[#f2fcf6] flex items-center justify-center px-4">
+      <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <div className="bg-white shadow-lg rounded-3xl border border-green-200 p-8 w-full max-w-md text-center">
         <div className="mb-6 flex justify-center">
           <div className="bg-green-700 p-4 rounded-md">
@@ -83,7 +144,7 @@ const SignInPage = () => {
           <button
             type="button"
             onClick={() => setSelectedRole("customer")}
-            className={`flex items-center justify-center gap-2 w-1/2 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+            className={`flex items-center justify-center gap-2 w-1/2 py-2 rounded-l-full text-sm font-medium transition-all duration-300 ${
               selectedRole === "customer"
                 ? "bg-green-700 text-white"
                 : "text-gray-600"
@@ -96,7 +157,7 @@ const SignInPage = () => {
           <button
             type="button"
             onClick={() => setSelectedRole("vendor")}
-            className={`flex items-center justify-center gap-2 w-1/2 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+            className={`flex items-center justify-center gap-2 w-1/2 py-2 rounded-r-full text-sm font-medium transition-all duration-300 ${
               selectedRole === "vendor"
                 ? "bg-green-700 text-white"
                 : "text-gray-600"
@@ -108,12 +169,6 @@ const SignInPage = () => {
         </div>
 
         {/* Error display */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm text-left">
-            {error}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} className="text-left">
           <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
           <input
@@ -142,9 +197,9 @@ const SignInPage = () => {
               <input type="checkbox" className="mr-2 border-2 border-green-200 bg-gray-100" />
               Remember me
             </label>
-            <a href="#" className="text-sm text-green-700 hover:underline">
+            <Link to="/forgot_password" className="text-sm text-green-700 hover:underline">
               Forgot password?
-            </a>
+            </Link>
           </div>
 
           <button
@@ -164,6 +219,13 @@ const SignInPage = () => {
           </Link>
         </p>
       </div>
+      
+      {/* Pricing Modal for Vendors */}
+      <PricingModal
+        isOpen={showPricingModal}
+        onClose={handleSkipPricing}
+        onSelectPlan={handlePlanSelection}
+      />
     </div>
   );
 };

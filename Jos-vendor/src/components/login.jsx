@@ -4,6 +4,11 @@ import { useNavigate } from "react-router-dom";
 import "../index.css"
 import logo from "../assets/vendor.png";
 import { Link } from "react-router-dom";
+import { auth, db } from "../firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { setDoc, doc } from "firebase/firestore";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const CreateAccount = () => {
   const [selectedRole, setSelectedRole] = useState("customer");
@@ -34,61 +39,80 @@ const CreateAccount = () => {
   const handleVendorChange = (e) => {
     const { name, value } = e.target;
     setVendorForm(prev => ({ ...prev, [name]: value }));
-    setError("");
   };
 
   const handleCustomerChange = (e) => {
     const { name, value } = e.target;
     setCustomerForm(prev => ({ ...prev, [name]: value }));
-    setError("");
   };
 
   const handleVendorSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
     if (vendorForm.password !== vendorForm.confirmPassword) {
-      setError("Passwords do not match");
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    if (vendorForm.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
       return;
     }
 
     console.log('Submitting vendor signup', vendorForm);
     setLoading(true);
     try {
-      const res = await fetch("https://vending-n63r.onrender.com/api/auth/vendor/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vendorName: vendorForm.vendorName,
-          businessName: vendorForm.businessName,
-          businessCategory: vendorForm.businessCategory,
-          businessLocation: vendorForm.businessLocation,
-          email: vendorForm.email,
-          password: vendorForm.password,
-          confirmPassword: vendorForm.confirmPassword
-        })
-      },
-    );
+      // Create Firebase Auth user
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        vendorForm.email,
+        vendorForm.password
+      );
 
-      console.log(res)
+      const user = userCredential.user;
+      console.log('Firebase user created:', user.uid);
 
-      const data = await res.json();
-      console.log('signup response', res.status, data);
-      if (!res.ok) {
-        setError(data.message || (data.errors && data.errors[0] && data.errors[0].msg) || 'Signup failed');
-        setLoading(false);
-        return;
-      }
+      // Add vendor data to Firestore
+      await setDoc(doc(db, "vendors", user.uid), {
+        uid: user.uid,
+        vendorName: vendorForm.vendorName,
+        businessName: vendorForm.businessName,
+        businessCategory: vendorForm.businessCategory,
+        businessLocation: vendorForm.businessLocation,
+        email: vendorForm.email,
+        role: "vendor",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
 
-      // Save token and user to localStorage so dashboard can read it
-      if (data.token) localStorage.setItem('token', data.token);
-      if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+      console.log('Vendor data saved to Firestore');
 
+      // Save user info to localStorage
+      localStorage.setItem('user', JSON.stringify({
+        uid: user.uid,
+        email: user.email,
+        role: 'vendor',
+        vendorName: vendorForm.vendorName,
+        businessName: vendorForm.businessName
+      }));
+
+      toast.success("Vendor account created successfully!");
+      
       // Navigate to vendor dashboard
-      navigate('/VendorDashboard');
+      setTimeout(() => {
+        navigate('/VendorDashboard');
+      }, 1500);
     } catch (err) {
-      console.error('signup error', err);
-      setError(err.message || 'An error occurred');
+      console.error('vendor signup error', err);
+      if (err.code === 'auth/email-already-in-use') {
+        toast.error("Email already in use. Please use a different email.");
+      } else if (err.code === 'auth/weak-password') {
+        toast.error("Password is too weak. Please use a stronger password.");
+      } else if (err.code === 'auth/invalid-email') {
+        toast.error("Invalid email address.");
+      } else {
+        toast.error(err.message || 'An error occurred during signup');
+      }
     } finally {
       setLoading(false);
     }
@@ -96,47 +120,69 @@ const CreateAccount = () => {
 
   const handleCustomerSubmit = async (e) => {
     e.preventDefault();
-    setError("");
 
     if (customerForm.password !== customerForm.confirmPassword) {
-      setError("Passwords do not match");
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    if (customerForm.password.length < 6) {
+      toast.error("Password must be at least 6 characters");
       return;
     }
 
     console.log('Submitting customer signup', customerForm);
     setLoading(true);
     try {
-      const res = await fetch("https://vending-n63r.onrender.com/api/auth/customer/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: customerForm.fullName,
-          email: customerForm.email,
-          phone: customerForm.phoneNumber,
-          password: customerForm.password,
-          confirmPassword: customerForm.confirmPassword
-        })
+      // Create Firebase Auth user
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        customerForm.email,
+        customerForm.password
+      );
+
+      const user = userCredential.user;
+      console.log('Firebase user created:', user.uid);
+
+      // Add customer data to Firestore
+      await setDoc(doc(db, "customers", user.uid), {
+        uid: user.uid,
+        fullName: customerForm.fullName,
+        email: customerForm.email,
+        phoneNumber: customerForm.phoneNumber,
+        role: "customer",
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
 
-      console.log(res);
+      console.log('Customer data saved to Firestore');
 
-      const data = await res.json();
-      console.log('customer signup response', res.status, data);
-      if (!res.ok) {
-        setError(data.message || (data.errors && data.errors[0] && data.errors[0].msg) || 'Signup failed');
-        setLoading(false);
-        return;
-      }
+      // Save user info to localStorage
+      localStorage.setItem('user', JSON.stringify({
+        uid: user.uid,
+        email: user.email,
+        role: 'customer',
+        fullName: customerForm.fullName,
+        phoneNumber: customerForm.phoneNumber
+      }));
 
-      // Save token and user to localStorage so product page can read it
-      if (data.token) localStorage.setItem('token', data.token);
-      if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-
+      toast.success("Customer account created successfully!");
+      
       // Navigate to product page
-      navigate('/product');
+      setTimeout(() => {
+        navigate('/product');
+      }, 1500);
     } catch (err) {
       console.error('customer signup error', err);
-      setError(err.message || 'An error occurred');
+      if (err.code === 'auth/email-already-in-use') {
+        toast.error("Email already in use. Please use a different email.");
+      } else if (err.code === 'auth/weak-password') {
+        toast.error("Password is too weak. Please use a stronger password.");
+      } else if (err.code === 'auth/invalid-email') {
+        toast.error("Invalid email address.");
+      } else {
+        toast.error(err.message || 'An error occurred during signup');
+      }
     } finally {
       setLoading(false);
     }
@@ -144,6 +190,18 @@ const CreateAccount = () => {
 
   return (
     <div className="min-h-screen bg-[#f2fcf6] flex items-center justify-center px-4">
+      <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <div className="bg-white shadow-lg border border-green-200 rounded-lg my-20 p-8 w-full max-w-2xl text-center transition-all duration-500">
         {/* Top Icon */}
         <div className="mb-6 flex justify-center">
@@ -157,7 +215,7 @@ const CreateAccount = () => {
           Create Account
         </h2>
         <p className="text-base text-gray-500 mb-6">
-          Join JOS Vendor’s Hub today
+          Join JOS Vendor's Hub today
         </p>
 
         
@@ -165,7 +223,7 @@ const CreateAccount = () => {
         <div className="flex justify-center mb-6 bg-[#e8f9f0] rounded-full p-1 w-full max-w-md mx-auto">
         <button
             onClick={() => setSelectedRole("customer")}
-            className={`flex items-center justify-center gap-2 w-1/2 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+            className={`flex items-center justify-center gap-2 w-1/2 py-2 rounded-l-full text-sm font-medium transition-all duration-300 ${
             selectedRole === "customer"
                 ? "bg-green-700 text-white"
                 : "text-gray-600"
@@ -178,7 +236,7 @@ const CreateAccount = () => {
         
         <button
             onClick={() => setSelectedRole("vendor")}
-            className={`flex items-center justify-center gap-2 w-1/2 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+            className={`flex items-center justify-center gap-2 w-1/2 py-2 rounded-r-full text-sm font-medium transition-all duration-300 ${
             selectedRole === "vendor"
                 ? "bg-green-700 text-white"
                 : "text-gray-600"
@@ -191,12 +249,6 @@ const CreateAccount = () => {
 
 
         {/* FORMS */}
-        {/* Error display */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm text-left">
-            {error}
-          </div>
-        )}
         {selectedRole === "vendor" ? (
           // ---------- Vendor Form ----------
           <form onSubmit={handleVendorSubmit} className="text-left space-y-4 animate-fadeIn">
@@ -406,7 +458,7 @@ const CreateAccount = () => {
         {/* Footer */}
         <p className="text-base text-gray-600 mt-6">
           Already have an account?{" "}
-          <Link to="/sign-in" className="text-green-700 hover:underline">
+          <Link to="/sign-up" className="text-green-700 hover:underline">
             Sign in
           </Link>
         </p>

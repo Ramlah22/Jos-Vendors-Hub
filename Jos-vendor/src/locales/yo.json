@@ -1,0 +1,14 @@
+{
+  "common": {
+    "language": "Ede",
+    "english": "English",
+    "hausa": "Hausa",
+    "yoruba": "Yoruba",
+    "igbo": "Igbo"
+  },
+  "home": {
+    "title": "Wole ni iranlówo, ṣe awárí oníkálúkú onimuran kíjìpé",
+    "subtitle": "Wá for àgbájọ kan tí o dára ju lòde",
+    "contactUs": "Olubasọ Wa"
+  }
+}

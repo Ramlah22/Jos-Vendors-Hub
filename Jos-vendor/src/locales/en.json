@@ -1,0 +1,14 @@
+{
+  "common": {
+    "language": "Language",
+    "english": "English",
+    "hausa": "Hausa",
+    "yoruba": "Yoruba",
+    "igbo": "Igbo"
+  },
+  "home": {
+    "title": "Join easily, discover trusted VENDORS instantly.",
+    "subtitle": "Find the best vendors in your area",
+    "contactUs": "Contact Us"
+  }
+}

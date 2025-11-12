@@ -1,0 +1,14 @@
+{
+  "common": {
+    "language": "Harshe",
+    "english": "English",
+    "hausa": "Hausa",
+    "yoruba": "Yoruba",
+    "igbo": "Igbo"
+  },
+  "home": {
+    "title": "Shiga cikin sauqi, gani wajen jiya da yawa jiya",
+    "subtitle": "Nemi masu sako mafi kyau a cikin yankinku",
+    "contactUs": "Tuntubo Mun"
+  }
+}
