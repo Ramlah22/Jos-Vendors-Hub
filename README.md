@@ -81,7 +81,7 @@ Maps: Google Maps API (planned for integration)
 
 🚀 Deployment
 
-Deployment link will be added once the project is live.
+https://jos-vendors-hub.vercel.app/
 
 🔐 Authentication
 
