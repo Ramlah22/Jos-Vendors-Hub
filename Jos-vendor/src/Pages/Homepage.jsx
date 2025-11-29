@@ -256,20 +256,22 @@ export default function LandingPage() {
                     Become a Vendor
                   </Link>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {products
-                    .filter(p => {
-                      const matchesCategory = selectedCategory === 'All Categories' || p.category === selectedCategory;
-                      const matchesSearch = !searchQuery || 
-                        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        p.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        p.vendorName?.toLowerCase().includes(searchQuery.toLowerCase());
-                      return matchesCategory && matchesSearch;
-                    })
-                    .slice(0, 9)
-                    .map((product) => (
+              ) : (() => {
+                const filteredProducts = products.filter(p => {
+                  const matchesCategory = selectedCategory === 'All Categories' || p.category === selectedCategory;
+                  const matchesSearch = !searchQuery || 
+                    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    p.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    p.vendorName?.toLowerCase().includes(searchQuery.toLowerCase());
+                  return matchesCategory && matchesSearch;
+                });
+                const displayedProducts = filteredProducts.slice(0, 5);
+                const hasMoreProducts = filteredProducts.length > 5;
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {displayedProducts.map((product) => (
                       <div key={product.id} className="bg-white border border-green-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300">
                         <div className="relative h-48">
                           <img 
@@ -323,8 +325,29 @@ export default function LandingPage() {
                         </div>
                       </div>
                     ))}
-                </div>
-              )}
+                    
+                    {/* Call-to-action card to go to product page */}
+                    {hasMoreProducts && (
+                      <div className="bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300 flex flex-col items-center justify-center p-8 text-center">
+                        <ShoppingBag className="w-16 h-16 text-emerald-600 mb-4" />
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                          Discover More Products
+                        </h3>
+                        <p className="text-gray-600 mb-6 text-sm">
+                          Explore our full collection of {filteredProducts.length} products
+                        </p>
+                        <Link 
+                          to="/product" 
+                          className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-emerald-700 transition shadow-md hover:shadow-lg"
+                        >
+                          <ArrowRight size={18} />
+                          Go to Product Page
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

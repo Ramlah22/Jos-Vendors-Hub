@@ -18,6 +18,7 @@ import VendorProducts from "./Dashboard/VendorProducts";
 import VendorOrders from "./Dashboard/VendorOrders";
 import VendorMessages from "./Dashboard/VendorMessages";
 import VendorSettings from "./Dashboard/VendorSettings";
+import FeatureNotImplemented from "./Pages/FeatureNotImplemented";
 
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
         <Route path="/Vendorpage1" element={<Vendor1 />} />
         <Route path="/VendorDashboard" element={<VendorDashboard />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/feature-not-implemented" element={<FeatureNotImplemented />} />
         
         {/* Vendor Dashboard Routes */}
         <Route path="/vendor/overview" element={<VendorOverview />} />

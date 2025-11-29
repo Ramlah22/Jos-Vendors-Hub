@@ -465,7 +465,7 @@ const VendorDetail = () => {
                               </div>
                               
                               <button
-                                onClick={() => addToCart(product)}
+                                onClick={() => navigate('/feature-not-implemented')}
                                 className="bg-emerald-600 text-white p-2 rounded-lg hover:bg-emerald-700 transition"
                               >
                                 <ShoppingCart size={16} />

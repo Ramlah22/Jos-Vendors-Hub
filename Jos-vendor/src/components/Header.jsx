@@ -61,10 +61,11 @@ export default function Header() {
             {/* Contact Us */}
             <Link 
               to="/contact" 
-              className="hidden md:flex items-center gap-2 text-gray-600 hover:text-emerald-600 transition"
+              className="flex items-center gap-1 sm:gap-2 text-gray-600 hover:text-emerald-600 transition p-2 sm:p-0"
+              title="Contact Us"
             >
-              <Mail size={16} />
-              <span className="text-sm">Contact Us</span>
+              <Mail size={18} className="sm:w-4 sm:h-4" />
+              <span className="text-sm hidden sm:inline">Contact Us</span>
             </Link>
 
           

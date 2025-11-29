@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useCart } from "../context/CartContext";
 import { db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { 
@@ -24,7 +23,6 @@ import Header from "../components/Header";
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -68,12 +66,8 @@ export default function ProductDetail() {
   }, [id]);
 
   const handleAddToCart = () => {
-    if (product && quantity > 0 && quantity <= product.stock) {
-      for (let i = 0; i < quantity; i++) {
-        addToCart(product);
-      }
-      // You could show a success toast here
-    }
+    // Navigate to feature not implemented page
+    navigate('/feature-not-implemented');
   };
 
   const handleContactVendor = () => {

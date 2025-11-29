@@ -304,6 +304,8 @@ const ProductModal = ({
   );
 };
 
+const MAX_PRODUCTS = 3;
+
 export default function VendorProducts() {
   const [vendor, setVendor] = useState(null);
   const [products, setProducts] = useState([]);
@@ -414,6 +416,12 @@ export default function VendorProducts() {
   const handleSaveProduct = async (e) => {
     e.preventDefault();
     if (!vendor?.uid) return;
+
+    // Check product limit for new products only (not when editing)
+    if (!editingProduct && products.length >= MAX_PRODUCTS) {
+      toast.error(`You can only post ${MAX_PRODUCTS} products. Please delete an existing product to add a new one.`);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -648,16 +656,35 @@ export default function VendorProducts() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div>
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">My Products</h2>
-              <p className="text-sm sm:text-base text-gray-600 mt-1">Manage your product inventory</p>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">
+                Manage your product inventory ({products.length}/{MAX_PRODUCTS} products)
+              </p>
             </div>
             <button
-              onClick={() => setShowProductModal(true)}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-emerald-700 transition text-sm sm:text-base"
+              onClick={() => {
+                if (products.length >= MAX_PRODUCTS) {
+                  toast.error(`You can only post ${MAX_PRODUCTS} products. Please delete an existing product to add a new one.`);
+                  return;
+                }
+                setShowProductModal(true);
+              }}
+              disabled={products.length >= MAX_PRODUCTS}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-emerald-700 transition text-sm sm:text-base disabled:bg-gray-400 disabled:cursor-not-allowed disabled:hover:bg-gray-400"
             >
               <Plus size={20} />
               Add Product
             </button>
           </div>
+
+          {/* Product Limit Warning */}
+          {products.length >= MAX_PRODUCTS && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Product Limit Reached:</strong> You have reached the maximum limit of {MAX_PRODUCTS} products. 
+                To add a new product, please delete an existing one first.
+              </p>
+            </div>
+          )}
 
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -698,8 +725,15 @@ export default function VendorProducts() {
                 {products.length === 0 ? "No products yet" : "No products match your search"}
               </p>
               <button
-                onClick={() => setShowProductModal(true)}
-                className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition"
+                onClick={() => {
+                  if (products.length >= MAX_PRODUCTS) {
+                    toast.error(`You can only post ${MAX_PRODUCTS} products. Please delete an existing product to add a new one.`);
+                    return;
+                  }
+                  setShowProductModal(true);
+                }}
+                disabled={products.length >= MAX_PRODUCTS}
+                className="bg-emerald-600 text-white px-6 py-3 rounded-lg hover:bg-emerald-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {products.length === 0 ? "Add Your First Product" : "Add New Product"}
               </button>
@@ -774,7 +808,7 @@ export default function VendorProducts() {
 
           {products.length > 0 && (
             <div className="mt-6 text-center text-sm text-gray-500">
-              Showing {filteredProducts.length} of {products.length} products
+              Showing {filteredProducts.length} of {products.length} products ({MAX_PRODUCTS} maximum)
             </div>
           )}
         </div>
